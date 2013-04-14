@@ -1,0 +1,57 @@
+body
+{
+	background-image:url('img/wavegrid.png');
+	background-repeat:repeat;
+}
+
+.cancel{
+float: left;
+margin-left: 5px;
+}
+
+.up{
+float: left;
+margin-left: 5px;
+}
+
+.down{
+float: left;
+margin-left: 5px;
+}
+
+.cmd{
+	margin-bottom: 50px;
+}
+
+.addControl{
+	float: left;
+	margin-left: 30px;
+	margin-top: 20px;
+	background-color: #0769AD;
+	padding: 5px 10px;
+	color: white;
+}
+
+.clabel{
+	float: left;
+	margin-left: 25px;
+	padding: 5px 10px;
+}
+
+
+#toolbar{
+	width: 400px;
+	height: 75px;
+ 	border-color: #0769AD;
+	border-style: solid;
+	border-width: 2px;
+	margin-bottom: 50px;
+}
+
+.alpaca-fieldset-item-container{
+	width: 600px;
+	border-color: #0769AD;
+	border-style: dashed;
+	border-width: 1px;
+	margin-bottom: 2px;
+}
