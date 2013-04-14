@@ -52,12 +52,14 @@ function FormModel(){
 							  "title":obj["titolo"],
 							  "format" : "date"
 							}
+					this.fields[nome] = {}
 				break;
 				case "number":
 					this.props[nome] =  {
 							  "type":"number",
 							  "title":obj["titolo"]
 							}
+					this.fields[nome] = {}		
 				break;
 				case "textarea":
 					this.props[nome] =  {
@@ -94,6 +96,7 @@ function FormModel(){
 			var index = this.getElemIndex(nome);
 			if(index == -1) this.order.push({"name":nome, "props" : [this.props[nome], this.fields[nome]]});
 			else this.order[index] = {"name":nome, "props" : [this.props[nome], this.fields[nome]]};
+			this.updateFormOrder();
 		};
 		
 		this.moveUp = function(name){
