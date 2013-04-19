@@ -38,7 +38,7 @@ function FormModel(){
 		};
 		
 		this.remove = function(name){
-			this.order.splice(this.order.indexOf(name),1);
+			this.order.splice(this.getElemIndex(name),1);
 			this.updateFormOrder();
 		};
 		
@@ -101,7 +101,7 @@ function FormModel(){
 		
 		this.moveUp = function(name){
 			var index = this.getElemIndex(name);
-			if(index == 0 ) return;
+			if(index <= 0 ) return;
 			var tmp = this.order[index-1];
 			this.order[index-1] = this.order[index];
 			this.order[index] = tmp;
@@ -110,7 +110,7 @@ function FormModel(){
 		
 		this.moveDown = function(name){
 			var index = this.getElemIndex(name);
-			if(index == this.order.length -1 ) return;
+			if(index == this.order.length -1 || index == -1) return;
 			var tmp = this.order[index+1];
 			this.order[index+1] = this.order[index];
 			this.order[index] = tmp;
@@ -144,7 +144,7 @@ $(document).ready(function(){
 			return true;
 	});
 	
-	$(document).on("click", "#date, #number, #textarea, #radio", function(){
+	$(document).on("click", ".addControl", function(){
 		addControls($(this).attr('id'));
 	})
 	
@@ -161,7 +161,32 @@ $(document).ready(function(){
 
 
 function myPostRender(form){
+	myPostRender.count = 0;
+	myPostRender.lastOffset = 0;
+    $( ".alpaca-fieldset-items-container" ).sortable({
+		start: function(event, ui) {
+			
+		},
+		change: function( event, ui ) {
+			if(ui.originalPosition.top - ui.position.top > myPostRender.lastOffset)
+				myPostRender.count++;
+			else myPostRender.count--;
+			myPostRender.lastOffset = ui.originalPosition.top - ui.position.top;
+		},
+		stop: function(event, ui) {
+			var target ="#" + ui.item.attr('alpaca-id');
+			var name = $(target).attr('name');
+			console.log(myPostRender.count);
+			if(myPostRender.count > 0) for(var i = 0; i < myPostRender.count; i++)preview.moveUp(name);
+			if(myPostRender.count < 0) for(var i = 0; i > myPostRender.count; i--)preview.moveDown(name);
+			myPostRender.count = 0;
+			myPostRender.lastOffset = 0;
+		},
+		revert: true
+    });
+
 	$("#form_preview .alpaca-fieldset-item-container[alpaca-id]").each(function(){
+	
 			var target ="#" + $(this).attr('alpaca-id');
 			var name = $(target).attr('name');
 			
