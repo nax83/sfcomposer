@@ -41,6 +41,11 @@ function FormModel(){
 			this.order.splice(this.getElemIndex(name),1);
 			this.updateFormOrder();
 		};
+
+        this.getElemByName = function(name){
+            console.log("Edit:" + this.getElemIndex(name));
+            return this.order[this.getElemIndex(name)];
+        };
 		
 		this.add = function(obj, type){
 			var nome = obj["titolo"];
@@ -52,7 +57,9 @@ function FormModel(){
 							  "title":obj["titolo"],
 							  "format" : "date"
 							}
-					this.fields[nome] = {}
+					this.fields[nome] = {
+						"hideInitValidationError" : true
+					}
 				break;
 				case "number":
 					this.props[nome] =  {
@@ -98,7 +105,31 @@ function FormModel(){
 			else this.order[index] = {"name":nome, "props" : [this.props[nome], this.fields[nome]]};
 			this.updateFormOrder();
 		};
-		
+
+        this.edit = function(obj,nome){
+            alert(this);
+            console.log(this);
+            console.log(obj);
+        
+            var e = [];
+            for (var i=1; i<65; i++)
+                if(obj["item_"+i]!='') e.push(obj["item_"+i]);
+            
+            
+            this.props[nome] =  {
+                "type":"string",
+                "title":obj["titolo"],
+                "enum":e
+            }
+            this.fields[nome] = {
+                "type": "select",
+                "optionLabels": e
+            }
+			var index = this.getElemIndex(nome);
+			if(index == -1) this.order.push({"name":nome, "props" : [this.props[nome], this.fields[nome]]});
+			else this.order[index] = {"name":nome, "props" : [this.props[nome], this.fields[nome]]};
+			this.updateFormOrder();
+        }
 		this.moveUp = function(name){
 			var index = this.getElemIndex(name);
 			if(index <= 0 ) return;
@@ -127,6 +158,15 @@ function FormModel(){
 			}
 			this.props = this.form["schema"]["properties"];
 			this.fields = this.form["options"]["fields"];
+		};
+
+		this.setInitialOrder = function(){
+		       for (var prop in this.form["schema"]["properties"]){
+		       		this.order.push({"name" : prop, "props" : [ this.form["schema"]["properties"][prop], this.form["options"]["fields"][prop]]});
+		       }
+		       this.props = this.form["schema"]["properties"];
+		       this.fields = this.form["options"]["fields"];
+		
 		}
 }
 
@@ -140,7 +180,7 @@ $(document).ready(function(){
 	});	
 		
 	$(document).on('submit', "#web-tt-form", function(){
-			$("#WebTt_template").val(JSON.stringify(removePreviewDecoration(preview)));
+			$("#WebTt_template").val(JSON.stringify(preview.form));
 			return true;
 	});
 	
@@ -148,13 +188,26 @@ $(document).ready(function(){
 		addControls($(this).attr('id'));
 	})
 	
-	//try{
-	//	preview = JSON.parse($("#WebTt_template").val());
-	
-	//}catch(e){
-		preview = new FormModel();
+	preview = new FormModel();
+	try{
+		preview.form  = JSON.parse($("#WebTt_template").val());
+		preview.setInitialOrder();
+	}catch(e){
+		preview.form = {"schema": 
+				{
+					"title":"WebTT",
+					"description": "Preview",
+					"type":"object",
+					"properties": {  }
+				},
+				"options" : {
+					"fields" : {
+						}
+				}
+				};
 		
-	//}
+
+	}
 	preview.form['postRender'] = myPostRender;
 	$("#form_preview").alpaca(preview.form);
 });
@@ -164,6 +217,7 @@ function myPostRender(form){
 	myPostRender.count = 0;
 	myPostRender.lastOffset = 0;
     $( ".alpaca-fieldset-items-container" ).sortable({
+		axis: 'y',
 		start: function(event, ui) {
 			
 		},
@@ -200,8 +254,12 @@ function myPostRender(form){
 			cmd$.append('<div class="cancel"><img src="img/del.png" height="24" width=24"></div>');
 			cmd$.append('<div class="up"><img src="img/up.png" height="24" width=24"></div>');
 			cmd$.append('<div class="down"><img src="img/arrow.png" height="24" width=24"></div>');
+
+			var elementType = $(target).get(0).tagName;
+            if(elementType=='SELECT' )
+                cmd$.append('<div class="edit"><img src="img/edit.png" height="24" width=24"></div>');
+
 			$(this).append(cmd$);
-			
 			if(prev != undefined && prev != ''){
 				$(this).on('click', '.up', function(){
 					preview.moveUp(name);
@@ -217,12 +275,69 @@ function myPostRender(form){
 			}
 			
 			$(this).on('click', '.cancel', function(){
+				console.log("Nome: " + name);
 				preview.remove(name);
 				$("#form_preview").alpaca(preview.form);
 			});
+
+            $(this).on('click', '.edit', function(){
+                console.log("Editing: " + name);
+                editControl(name);
+            })
 		}); 
 }
 
+function editControl(name){
+    var elem=preview.getElemByName(name);
+    var elem_enum=elem['props'][0]['enum'];
+    console.log(elem['props'][0]['enum']);
+
+    description = "Aggiungi un campo di tipo combobox";
+    var form = {	
+        "schema": {
+            "description": description,
+            "type":"object",
+            "properties": {
+                "titolo": {
+                    "type":"string",
+                    "title":"Titolo",
+                    "default":name
+                },
+            }
+        } 
+    }
+    for(var i=1; i<65; i++){
+        if(elem_enum[i-1]!="" && (i-1)<elem_enum.length){
+            form["schema"]["properties"]["item_"+i]= {
+                "type":"string",
+                "title":"item_"+i,
+                "default":elem_enum[i]
+            }
+        }
+        else{
+            form["schema"]["properties"]["item_"+i] = {
+                "type":"string",
+                "title":"item_"+i,
+                "default":""
+            }
+        }
+    }
+    
+    console.log(form);
+	form["postRender"] = function(renderedForm) {
+					  $('#form1-button').click(function() {
+						if (renderedForm.isValid(true)) {
+						  var val = renderedForm.getValue();
+						  preview.edit(val,name);
+						  $("#form_preview").alpaca(preview.form);
+						  $("#controlsDialog").dialog("close");
+						}
+					  });
+				  }
+	$("#form1").alpaca(form);
+	$("#controlsDialog").dialog("open");
+	return false;
+}
 function addControls(type){
 
 	$("#form1-button").off();	
@@ -266,10 +381,6 @@ function addControls(type){
 					  "type":"string",
 					  "title":"Titolo"
 					},
-					"nome": {
-					  "type":"string",
-					  "title":"nome"
-					},
 					"item_1": {
 					  "type":"string",
 					  "title":"item_1"
@@ -306,4 +417,117 @@ function addControls(type){
 	$("#form1").alpaca(form);
 	$("#controlsDialog").dialog("open");
 	return false;
+}
+
+
+function updatePreview(obj, t){
+
+	var tmp = preview["schema"]["properties"];
+	var fields = preview["options"]["fields"];
+	var nome = obj["titolo"];
+	nome = $.trim(nome).replace(/\s+|'|\"/g, "");
+	
+	switch (t){
+		case "date":
+			tmp[nome] =  {
+					  "type":"string",
+					  "title":obj["titolo"],
+					  "format" : t
+					}
+			fields[nome] = {
+						"helper": "Cancella"
+					}
+		break;
+		case "number":
+			tmp[nome] =  {
+					  "type":"number",
+					  "title":obj["titolo"]
+					}
+			fields[nome] = {
+						"helper": "Cancella"
+					}
+		break;
+		case "textarea":
+			tmp[nome] =  {
+					  "type":"string",
+					  "title":obj["titolo"]
+					}
+					
+			fields[nome] = {
+						"type": "textarea",
+						"rows": 5,
+						"cols": 40,
+						"helper": "Cancella"
+					}
+				
+			
+		break;
+		case "radio":
+			var e = [];
+            if(obj["item_1"]!='') e.push(obj["item_1"]);
+			if(obj["item_2"]!='') e.push(obj["item_2"]);
+			if(obj["item_3"]!='') e.push(obj["item_3"]);
+			if(obj["item_4"]!='') e.push(obj["item_4"]);
+			
+			tmp[nome] =  {
+				"title": obj["titolo"],
+				"type":"string",
+				"enum":e
+			}
+			fields[nome] = {
+				"type": "select",
+				"optionLabels": e,
+				"helper": "Cancella"
+			}
+			
+		break;
+	}
+				
+	//$.extend(tmp, obj);
+	//var test = JSON.stringify(tmp);
+	
+	preview["schema"]["properties"] = tmp;
+	preview["options"]["fields"] = fields;
+
+	preview["options"]["fields"][nome]['helper'] = "Cancella";
+	//var test = JSON.stringify(preview);
+	$("#form_preview").empty();
+	$("#form_preview").alpaca(preview);
+	$("#form_preview").on('click', '.alpaca-controlfield-helper', function(){
+		var n = $(this).siblings('*[@name]').attr('name');
+		delete(preview["schema"]["properties"][n]);
+		delete(preview["options"]["fields"][n]);
+		$("#form_preview").empty();
+		$("#form_preview").alpaca(preview);
+	});
+}
+
+function myRenderForm(p){
+
+	$("#form_preview").alpaca(addPreviewDecoration(preview));
+	$("#form_preview").on('click', '.alpaca-controlfield-helper', function(){
+		var n = $(this).siblings('*[@name]').attr('name');
+		delete(preview["schema"]["properties"][n]);
+		delete(preview["options"]["fields"][n]);
+		$("#form_preview").empty();
+		$("#form_preview").alpaca(preview);
+		});
+
+}
+
+function addPreviewDecoration(p){
+	var helper = p
+	for(var nome in helper["options"]["fields"]){
+			helper["options"]["fields"][nome]['helper'] = "Cancella";
+	}
+	return helper;
+}
+
+function removePreviewDecoration(p){
+	
+	var helper = p
+	for(var nome in helper["options"]["fields"]){
+			delete helper["options"]["fields"][nome]['helper'];
+	}
+	return helper;
 }
